@@ -18,6 +18,9 @@ bot = Bot(command_prefix="!FISH#", intents=discord.Intents.all())
 trashEmoji = getTrashEmoji()
 acceptEmoji = getAcceptEmoji()
 
+rgxItemName = r'\[([\w+\s]+)(\([0-9]+\))?\]' # gets words inside of "[]" e.g. [Spaulders of Catatonia] also considers if the ID is included e.g. [Spaulders of Catatonia(40594)]
+rgxItemID = r'(\([0-9]+\))?'
+
 @bot.command(name="clear", help="clears unpinned loot messages by default - followed by 'all' will clear all loot messages")
 async def clear(context:Context, argument:str|None):    
     await deleteLootMessages(context.message.channel, context.guild, argument == "all") # type: ignore
@@ -26,10 +29,10 @@ async def clear(context:Context, argument:str|None):
 @bot.command(name="loot", help="copy pasta all the items after this (item names have to be surrounded by [] - all other text will be ignored)")
 async def loot(context:Context):
     message = context.message
-    pattern = r'\[([\w+\s]+)\]'
-    itemNames = re.findall(pattern, message.content)
+    itemNames = re.findall(rgxItemName, message.content)
     for itemName in itemNames:
-        item = await getItemData(itemName)
+        itemIDs = re.findall(rgxItemID, itemName)
+        item = await getItemData(itemName, None if itemIDs.count == 0 else itemIDs[0])
         if (item):
             await createLootMessage(message.channel, item, context.author) # type: ignore
     await message.delete()
@@ -37,10 +40,10 @@ async def loot(context:Context):
 @bot.command(name="fetch", help="fetches all given items data")
 async def fetch(context:Context):
     message = context.message
-    pattern = r'\[([\w+\s]+)\]'
-    itemNames = re.findall(pattern, message.content)
+    itemNames = re.findall(rgxItemName, message.content)
     for itemName in itemNames:
-        await getItemData(itemName)
+        itemIDs = re.findall(rgxItemID, itemName)
+        await getItemData(itemName, None if itemIDs.count == 0 else itemIDs[0])
     await message.delete()
 
 @bot.event

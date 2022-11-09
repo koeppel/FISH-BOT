@@ -8,6 +8,8 @@ from util import getDataByName, setDataByName
 
 load_dotenv()
 
+fetchData = True
+
 OAUTH_TOKEN = os.getenv("OAUTH_TOKEN")
 
 class JSONItem(TypedDict):
@@ -37,10 +39,13 @@ def addItem(item:JSONItem):
         items.append(item)
         setItems(items)
 
-async def getItemData(itemName:str) -> JSONItem|None:
+async def getItemData(itemName:str, itemID:int|None = None) -> JSONItem|None:
     item = getItem(itemName)
     if not item:
-        item = await retrieveItemData(itemName)
+        if itemID:
+            item = JSONItem(name=itemName, id=itemID)
+        elif fetchData:
+            item = await retrieveItemData(itemName)
         if item != None:
             addItem(item)
     return item
@@ -76,6 +81,9 @@ async def retrieveItemData(itemName:str) -> JSONItem|None:
         else:
             print(f"retrieving data for '{itemName}' request status NOT OK (attempt {attempt}/{maxAttempts}) reason:")
             print(request.reason)
+            if (request.reason == "Unauthorized"):
+                keepLooping = False
+                fetchData = False
             if (attempt == maxAttempts):
                 keepLooping = False
             else:
