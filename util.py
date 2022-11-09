@@ -8,7 +8,7 @@ def getTrashEmoji() -> str:
     return "🗑"
 
 def getAllData() -> str:
-    file = open("data.json", "r")
+    file = open("data.json", "r+")
     fileContent = file.read()
     file.close()
     return fileContent
@@ -31,6 +31,6 @@ def setDataByName(dataName:str, data:list):
         outPut = {
             dataName: data
         }
-    file = open("data.json", "w")
+    file = open("data.json", "w+")
     file.write(json.dumps(outPut))
     file.close()

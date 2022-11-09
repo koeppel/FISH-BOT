@@ -2,7 +2,7 @@ import json
 
 from typing import TypedDict
 from item import JSONItem, getWowHeadURL
-from discord import TextChannel, User, Member
+from discord import TextChannel, User, Member, Guild
 from util import getDataByName, getTrashEmoji, getAcceptEmoji, setDataByName
 
 class LootMessage(TypedDict):
@@ -12,8 +12,25 @@ class LootMessage(TypedDict):
     authorID: int
     item: JSONItem
 
-def getLootMessages() -> list[LootMessage]:
-    return getDataByName("lootMessages")
+def getLootMessages(channel:TextChannel|None = None, guild:Guild|None = None) -> list[LootMessage]:
+    lootMessages:list[LootMessage] = []
+    if guild:
+        if channel:
+            for lootMessage in getDataByName("lootMessages"):
+                if lootMessage["guildID"] == guild.id and lootMessage["channelID"] == channel.id:
+                    lootMessages.append(lootMessage)
+        else:
+            for lootMessage in getDataByName("lootMessages"):
+                if lootMessage["guildID"] == guild.id:
+                    lootMessages.append(lootMessage)
+    elif channel:
+        for lootMessage in getDataByName("lootMessages"):
+                if lootMessage["channelID"] == channel.id:
+                    lootMessages.append(lootMessage)
+    else:
+        lootMessages = getDataByName("lootMessages")
+
+    return lootMessages
 
 def setLootMessages(lootMessages:list[LootMessage]):
     setDataByName("lootMessages", lootMessages)
@@ -44,6 +61,12 @@ async def deleteLootMessage(channel:TextChannel, messageID:int):
     removeLootMessage(message.id)
     await message.delete()
     print(f"deleted loot message in channel {channel.name}")
+
+async def deleteLootMessages(channel:TextChannel, guild:Guild|None, deletePinned:bool = False):
+    for lootMessage in getLootMessages(channel, guild): # type: ignore
+            message = await channel.fetch_message(lootMessage["messageID"])
+            if message and (deletePinned or not message.pinned):
+                    await deleteLootMessage(channel, message.id) # type: ignore
 
 def getLootMessage(messageID:int) -> LootMessage|None:
     lootMessages = getLootMessages()

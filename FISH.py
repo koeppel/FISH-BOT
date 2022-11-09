@@ -4,7 +4,7 @@ import re
 import discord
 import time
 
-from lootMessage import getLootMessages, getLootMessage, createLootMessage, deleteLootMessage
+from lootMessage import getLootMessage, createLootMessage, deleteLootMessage, deleteLootMessages
 from item import getItemData
 from util import getTrashEmoji, getAcceptEmoji
 from discord import User, Reaction, Message, MessageType, RawReactionActionEvent
@@ -19,14 +19,8 @@ trashEmoji = getTrashEmoji()
 acceptEmoji = getAcceptEmoji()
 
 @bot.command(name="clear", help="clears unpinned loot messages by default - followed by 'all' will clear all loot messages")
-async def clear(context:Context, argument:str|None):
-    lootMessages = getLootMessages()
-    channel = context.message.channel
-
-    for lootMessage in lootMessages:
-        message = await channel.fetch_message(lootMessage["messageID"]) if (channel.id == lootMessage["channelID"] and context.guild and context.guild.id == lootMessage["guildID"]) else None
-        if message and (argument == "all" or not message.pinned):
-                await deleteLootMessage(channel, message.id) # type: ignore
+async def clear(context:Context, argument:str|None):    
+    await deleteLootMessages(context.message.channel, context.guild, argument == "all") # type: ignore
     await context.message.delete()
 
 @bot.command(name="loot", help="copy pasta all the items after this (item names have to be surrounded by [] - all other text will be ignored)")
@@ -37,7 +31,16 @@ async def loot(context:Context):
     for itemName in itemNames:
         item = await getItemData(itemName)
         if (item):
-            await createLootMessage(message.channel, item, context.author)  # type: ignore
+            await createLootMessage(message.channel, item, context.author) # type: ignore
+    await message.delete()
+
+@bot.command(name="fetch", help="fetches all given items data")
+async def fetch(context:Context):
+    message = context.message
+    pattern = r'\[([\w+\s]+)\]'
+    itemNames = re.findall(pattern, message.content)
+    for itemName in itemNames:
+        await getItemData(itemName)
     await message.delete()
 
 @bot.event
@@ -45,9 +48,15 @@ async def on_ready():
     print(f'{bot.user} has connected to Discord!')
     for guild in bot.guilds:
         print(f'Connected to Guild {guild.name}')
+        # clean up fish discord
+        #if guild.id == 956889057466675211:
+        #    channel = guild.get_channel(1036634836342939689)
+        #    if channel:
+        #        await deleteLootMessages(channel, guild) # type: ignore
 
 @bot.event
 async def on_message(message:Message):
+    # Delete the "Bot pinned message XY" message
     if (message.type == MessageType.pins_add and bot.user != None and message.author.id == bot.user.id):
         await message.delete()
     await bot.process_commands(message)
@@ -61,13 +70,15 @@ async def on_raw_reaction_add(event:RawReactionActionEvent):
     guild = bot.get_guild(guildID) if guildID else None
     channel = guild.get_channel(channelID) if guild and channelID else None
     message = await channel.fetch_message(messageID) if channel and messageID else None # type: ignore
+    lootMessage = getLootMessage(message.id) if message else None
 
     userID = event.user_id
 
     if (bot.user != None
         and userID != bot.user.id
         and guild != None
-        and message != None):
+        and message != None
+        and lootMessage != None):
 
         member = await guild.fetch_member(userID)
         emoji = str(event.emoji)
