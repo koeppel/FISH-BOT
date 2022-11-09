@@ -1,6 +1,12 @@
 from typing import TypedDict
 import json
 
+def getRegexItemID() -> str:
+    return r'([0-9]+)'
+
+def getRegextItem() -> str:
+    return r'\[([\w+\s]+)(\([0-9]+\))?\]' # gets words inside of "[]" e.g. [Spaulders of Catatonia] also considers if the ID is included e.g. [Spaulders of Catatonia(40594)]
+
 def getAcceptEmoji() -> str:
     return "✔"
 

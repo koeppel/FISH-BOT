@@ -1,10 +1,12 @@
 import requests
 import json
 import os
+import re
 
+from re import Match
 from typing import TypedDict
 from dotenv import load_dotenv
-from util import getDataByName, setDataByName
+from util import getDataByName, setDataByName, getRegextItem, getRegexItemID
 
 load_dotenv()
 
@@ -98,3 +100,31 @@ def getWowHeadURL(item:JSONItem) -> str:
         itemNameFormatted = item["name"].lower()
         itemNameFormatted = itemNameFormatted.replace(" ", "-")
         return f"https://www.wowhead.com/wotlk/item={item['id']}/{itemNameFormatted}"
+
+async def getItemsForString(context:str) -> list[JSONItem]:
+    items = []
+
+    matches = re.findall(getRegextItem(), context)
+    for match in matches:
+        itemName = None
+        itemID = None
+        itemIDMatch = None
+
+        if isinstance(match, str):
+            itemName = match
+        elif isinstance(match, Match):
+            itemName = match.group()
+            itemIDMatch = re.search(getRegexItemID(), match.group(1))
+        else:
+            itemName = match[0]
+            if match[1]:
+                itemIDMatch = re.search(getRegexItemID(), match[1])
+
+        if itemName:
+            if itemIDMatch:
+                itemID = int(itemIDMatch.group(0))
+            item = await getItemData(itemName, itemID)
+            if item:
+                items.append(item)
+
+    return items

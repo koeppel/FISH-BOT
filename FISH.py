@@ -2,11 +2,10 @@
 import os
 import re
 import discord
-import time
 
 from lootMessage import getLootMessage, createLootMessage, deleteLootMessage, deleteLootMessages
-from item import getItemData
-from util import getTrashEmoji, getAcceptEmoji
+from item import getItemData, getItemsForString
+from util import getTrashEmoji, getAcceptEmoji, getRegexItemID, getRegextItem
 from discord import User, Reaction, Message, MessageType, RawReactionActionEvent
 from discord.ext.commands import Bot, Context
 from dotenv import load_dotenv
@@ -18,9 +17,6 @@ bot = Bot(command_prefix="!FISH#", intents=discord.Intents.all())
 trashEmoji = getTrashEmoji()
 acceptEmoji = getAcceptEmoji()
 
-rgxItemName = r'\[([\w+\s]+)(\([0-9]+\))?\]' # gets words inside of "[]" e.g. [Spaulders of Catatonia] also considers if the ID is included e.g. [Spaulders of Catatonia(40594)]
-rgxItemID = r'(\([0-9]+\))?'
-
 @bot.command(name="clear", help="clears unpinned loot messages by default - followed by 'all' will clear all loot messages")
 async def clear(context:Context, argument:str|None):    
     await deleteLootMessages(context.message.channel, context.guild, argument == "all") # type: ignore
@@ -29,22 +25,15 @@ async def clear(context:Context, argument:str|None):
 @bot.command(name="loot", help="copy pasta all the items after this (item names have to be surrounded by [] - all other text will be ignored)")
 async def loot(context:Context):
     message = context.message
-    itemNames = re.findall(rgxItemName, message.content)
-    for itemName in itemNames:
-        itemIDs = re.findall(rgxItemID, itemName)
-        item = await getItemData(itemName, None if itemIDs.count == 0 else itemIDs[0])
-        if (item):
-            await createLootMessage(message.channel, item, context.author) # type: ignore
+    items = await getItemsForString(message.content)
+    for item in items:
+        await createLootMessage(message.channel, item, context.author) # type: ignore
     await message.delete()
 
 @bot.command(name="fetch", help="fetches all given items data")
 async def fetch(context:Context):
-    message = context.message
-    itemNames = re.findall(rgxItemName, message.content)
-    for itemName in itemNames:
-        itemIDs = re.findall(rgxItemID, itemName)
-        await getItemData(itemName, None if itemIDs.count == 0 else itemIDs[0])
-    await message.delete()
+    await getItemsForString(context.message.content)
+    await context.message.delete()
 
 @bot.event
 async def on_ready():
