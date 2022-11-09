@@ -48,11 +48,6 @@ async def on_ready():
     print(f'{bot.user} has connected to Discord!')
     for guild in bot.guilds:
         print(f'Connected to Guild {guild.name}')
-        # clean up fish discord
-        #if guild.id == 956889057466675211:
-        #    channel = guild.get_channel(1036634836342939689)
-        #    if channel:
-        #        await deleteLootMessages(channel, guild) # type: ignore
 
 @bot.event
 async def on_message(message:Message):
